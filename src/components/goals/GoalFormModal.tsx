@@ -3,6 +3,7 @@ import { addMonths, format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { IconColorPicker } from "@/components/shared/IconColorPicker";
 import { useToast } from "@/components/ui/Toast";
@@ -131,11 +132,7 @@ export function GoalFormModal({
         </div>
 
         <Field label="Prazo">
-          <Input
-            type="date"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-          />
+          <DatePickerField value={deadline} onChange={setDeadline} title="Prazo da meta" />
         </Field>
 
         <IconColorPicker

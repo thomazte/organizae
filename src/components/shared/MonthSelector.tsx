@@ -10,7 +10,7 @@ export function MonthSelector({
   onChange: (date: Date) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-1 bg-surface border border-ink-200 rounded-xl p-1">
+    <div className="inline-flex w-fit self-center shrink-0 items-center gap-1 bg-surface border border-ink-200 rounded-xl p-1">
       <button
         onClick={() => onChange(subMonths(date, 1))}
         className="h-8 w-8 rounded-lg flex items-center justify-center text-ink-500 hover:bg-ink-100 transition-colors"

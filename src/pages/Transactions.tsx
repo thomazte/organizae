@@ -3,7 +3,8 @@ import { endOfMonth, startOfMonth } from "date-fns";
 import { Plus, Search, ArrowUpRight, ArrowDownRight, Receipt } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button } from "@/components/ui/Button";
-import { Input, Select } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Field";
+import { OptionPicker } from "@/components/ui/OptionPicker";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { MonthSelector } from "@/components/shared/MonthSelector";
@@ -159,18 +160,19 @@ export function Transactions() {
               className="pl-9"
             />
           </div>
-          <Select
+          <OptionPicker
+            title="Categoria"
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={setCategoryFilter}
             className="sm:w-48"
-          >
-            <option value="all">Todas as categorias</option>
-            {availableCategories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+            options={[
+              { value: "all", label: "Todas as categorias" },
+              ...availableCategories.map((c) => ({
+                value: c.id,
+                label: c.name,
+              })),
+            ]}
+          />
         </div>
 
         {/* Lista */}

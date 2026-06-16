@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { addMonths, format, parseISO } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Field, Input, Select, Textarea } from "@/components/ui/Field";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { OptionPicker } from "@/components/ui/OptionPicker";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Switch } from "@/components/ui/Switch";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -226,40 +228,38 @@ export function TransactionFormModal({
             <CurrencyInput value={amount} onChange={setAmount} />
           </Field>
           <Field label={type === "income" ? "Data de recebimento" : "Data de pagamento"}>
-            <Input
-              type="date"
+            <DatePickerField
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={setDate}
+              title={type === "income" ? "Data de recebimento" : "Data de pagamento"}
             />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Categoria">
-            <Select
+            <OptionPicker
+              title="Categoria"
               value={categoryId || filteredCategories[0]?.id || ""}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              {filteredCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setCategoryId}
+              options={filteredCategories.map((c) => ({
+                value: c.id,
+                label: c.name,
+              }))}
+            />
           </Field>
           <Field
             label={type === "income" ? "Forma de recebimento" : "Forma de pagamento"}
           >
-            <Select
+            <OptionPicker
+              title={type === "income" ? "Forma de recebimento" : "Forma de pagamento"}
               value={paymentMethodId || filteredMethods[0]?.id || ""}
-              onChange={(e) => setPaymentMethodId(e.target.value)}
-            >
-              {filteredMethods.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setPaymentMethodId}
+              options={filteredMethods.map((m) => ({
+                value: m.id,
+                label: m.name,
+              }))}
+            />
           </Field>
         </div>
 
@@ -282,18 +282,15 @@ export function TransactionFormModal({
           {isRecurring && (
             <div className="space-y-4 animate-fade-in">
               <Field label="Frequência">
-                <Select
+                <OptionPicker
+                  title="Frequência"
                   value={recurrence}
-                  onChange={(e) =>
-                    setRecurrence(e.target.value as RecurrenceFrequency)
-                  }
-                >
-                  {RECURRENCE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={(v) => setRecurrence(v as RecurrenceFrequency)}
+                  options={RECURRENCE_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                />
               </Field>
 
               {!isEditing && (
@@ -307,10 +304,10 @@ export function TransactionFormModal({
 
                   {!noEndDate && (
                     <Field label="Repetir até" hint="Gera os lançamentos até esta data.">
-                      <Input
-                        type="date"
+                      <DatePickerField
                         value={until}
-                        onChange={(e) => setUntil(e.target.value)}
+                        onChange={setUntil}
+                        title="Repetir até"
                       />
                     </Field>
                   )}
