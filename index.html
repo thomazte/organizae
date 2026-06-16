@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta
+      name="description"
+      content="Planner Financeiro pessoal - organize ganhos, despesas e metas de forma simples."
+    />
+    <title>Organizaê · Planner Financeiro</title>
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("organizae-theme");
+          var theme = "system";
+          if (raw) {
+            var data = JSON.parse(raw);
+            theme = (data.state && data.state.theme) || data.theme || "system";
+          }
+          var dark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

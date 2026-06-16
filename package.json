@@ -1,0 +1,42 @@
+{
+  "name": "organizae-planner-financeiro",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Planner Financeiro pessoal completo, moderno e responsivo.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "cap:sync": "npm run build && npx cap sync android",
+    "android:apk": "npm run cap:sync && cd android && .\\gradlew.bat assembleDebug && copy /Y app\\build\\outputs\\apk\\debug\\app-debug.apk ..\\organizaê.apk",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/status-bar": "^8.0.2",
+    "@supabase/supabase-js": "^2.108.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.456.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "recharts": "^2.13.3",
+    "zustand": "^5.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.19.21",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.1"
+  }
+}
