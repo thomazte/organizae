@@ -48,6 +48,8 @@ let applyingProfile = false;
 let attached = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let profileTimer: ReturnType<typeof setTimeout> | null = null;
+let pullTimer: ReturnType<typeof setTimeout> | null = null;
+let focusListenerAttached = false;
 
 function buildSnapshot(): Snapshot {
   const s = useFinanceStore.getState();
@@ -203,6 +205,53 @@ async function pushProfile(userId: string) {
   if (error) throw error;
 }
 
+/**
+ * Baixa o estado remoto e aplica localmente.
+ * Antes, envia alterações pendentes (ex.: exclusões feitas offline).
+ */
+async function pullLatest() {
+  if (!supabase || !currentUserId || applyingRemote) return;
+  const userId = currentUserId;
+
+  useSyncStatus.getState().set("syncing");
+  try {
+    if (snapshot) await syncDiff();
+
+    const remote = await pullRemote(userId);
+    applyingRemote = true;
+    useFinanceStore.getState().replaceAll(remote);
+    applyingRemote = false;
+
+    snapshot = buildSnapshot();
+    useSyncStatus.getState().markSynced();
+  } catch (err) {
+    console.error("[sync] erro ao baixar atualizações", err);
+    useSyncStatus.getState().set("error");
+  }
+}
+
+function schedulePull() {
+  if (pullTimer) clearTimeout(pullTimer);
+  pullTimer = setTimeout(() => {
+    void pullLatest();
+  }, 400);
+}
+
+function attachFocusPull() {
+  if (focusListenerAttached || typeof document === "undefined") return;
+  focusListenerAttached = true;
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentUserId) {
+      schedulePull();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    if (currentUserId) schedulePull();
+  });
+}
+
 function scheduleProfileSync() {
   if (profileTimer) clearTimeout(profileTimer);
   profileTimer = setTimeout(() => {
@@ -219,30 +268,31 @@ function scheduleProfileSync() {
 
 /**
  * Inicia a sincronização para um usuário:
- * 1. Sobe os dados locais (merge - nada é perdido).
- * 2. Baixa o estado consolidado e aplica localmente.
+ * 1. (Opcional) Sobe dados locais criados antes do login (modo convidado).
+ * 2. Baixa o estado remoto e aplica localmente.
  * 3. Passa a sincronizar automaticamente cada alteração.
  */
-async function startSync(userId: string) {
+async function startSync(userId: string, mergeLocalFirst = false) {
   if (!supabase) return;
   currentUserId = userId;
   useSyncStatus.getState().set("syncing");
 
   try {
-    // 1. Merge: envia tudo que está local para a nuvem.
-    const local = useFinanceStore.getState();
-    await upsertItems("categories", local.categories, userId);
-    await upsertItems("paymentMethods", local.paymentMethods, userId);
-    await upsertItems("transactions", local.transactions, userId);
-    await upsertItems("goals", local.goals, userId);
+    if (mergeLocalFirst) {
+      const local = useFinanceStore.getState();
+      await upsertItems("categories", local.categories, userId);
+      await upsertItems("paymentMethods", local.paymentMethods, userId);
+      await upsertItems("transactions", local.transactions, userId);
+      await upsertItems("goals", local.goals, userId);
+    } else if (snapshot) {
+      await syncDiff();
+    }
 
-    // 2. Baixa o estado consolidado e aplica.
     const remote = await pullRemote(userId);
     applyingRemote = true;
     useFinanceStore.getState().replaceAll(remote);
     applyingRemote = false;
 
-    // 3. Perfil: usa o remoto se existir; senão, envia o local.
     const remoteProfile = await pullProfile(userId);
     if (remoteProfile && (remoteProfile.name || remoteProfile.avatar)) {
       applyingProfile = true;
@@ -252,7 +302,6 @@ async function startSync(userId: string) {
       await pushProfile(userId);
     }
 
-    // 4. Snapshot base para os próximos diffs.
     snapshot = buildSnapshot();
     useSyncStatus.getState().markSynced();
   } catch (err) {
@@ -275,10 +324,11 @@ export function attachSync() {
   attached = true;
 
   // Reage a login/logout.
-  useAuthStore.subscribe((state) => {
+  useAuthStore.subscribe((state, prev) => {
     const userId = state.user?.id ?? null;
+    const fromGuest = prev?.status === "guest" && !prev?.user;
     if (userId && userId !== currentUserId) {
-      void startSync(userId);
+      void startSync(userId, fromGuest);
     } else if (!userId && currentUserId) {
       stopSync();
     }
@@ -299,10 +349,18 @@ export function attachSync() {
   // Caso já exista sessão ativa ao carregar.
   const existing = useAuthStore.getState().user?.id;
   if (existing) void startSync(existing);
+
+  attachFocusPull();
 }
 
-/** Força uma sincronização imediata (ex.: após importar backup). */
+/** Força uma sincronização imediata (envia alterações locais). */
 export function syncNow() {
   if (!currentUserId) return;
   void syncDiff();
+}
+
+/** Baixa alterações feitas em outros dispositivos. */
+export function pullNow() {
+  if (!currentUserId) return;
+  void pullLatest();
 }

@@ -111,11 +111,10 @@ export function Dashboard() {
         {/* Cartões de resumo */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
-            label="Saldo atual"
-            value={formatCurrency(balance)}
-            icon={Wallet}
-            accent={balance >= 0 ? "brand" : "red"}
-            hint="Acumulado total"
+            label="Saldo do mês"
+            value={formatCurrency(monthTotals.balance)}
+            icon={PiggyBank}
+            accent={monthTotals.balance >= 0 ? "violet" : "red"}
           />
           <StatCard
             label="Ganhos do mês"
@@ -130,10 +129,11 @@ export function Dashboard() {
             accent="red"
           />
           <StatCard
-            label="Saldo do mês"
-            value={formatCurrency(monthTotals.balance)}
-            icon={PiggyBank}
-            accent={monthTotals.balance >= 0 ? "violet" : "red"}
+            label="Saldo atual"
+            value={formatCurrency(balance)}
+            icon={Wallet}
+            accent={balance >= 0 ? "brand" : "red"}
+            hint="Acumulado total"
           />
         </div>
 
