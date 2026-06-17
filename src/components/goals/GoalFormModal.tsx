@@ -28,7 +28,9 @@ export function GoalFormModal({
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState(0);
   const [savedAmount, setSavedAmount] = useState(0);
-  const [deadline, setDeadline] = useState("");
+  const [deadline, setDeadline] = useState(() =>
+    format(addMonths(new Date(), 10), "yyyy-MM-dd")
+  );
   const [notes, setNotes] = useState("");
   const [color, setColor] = useState("#3b82f6");
   const [icon, setIcon] = useState("Target");

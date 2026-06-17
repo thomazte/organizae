@@ -8,6 +8,7 @@ import {
   isSameDay,
   isSameMonth,
   isToday,
+  isValid,
   parseISO,
   startOfMonth,
   startOfWeek,
@@ -35,11 +36,9 @@ export function DatePickerField({
 }) {
   const [open, setOpen] = useState(false);
   const selected = useMemo(() => {
-    try {
-      return parseISO(value);
-    } catch {
-      return new Date();
-    }
+    if (!value) return new Date();
+    const parsed = parseISO(value);
+    return isValid(parsed) ? parsed : new Date();
   }, [value]);
 
   const [viewDate, setViewDate] = useState(selected);
