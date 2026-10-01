@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Database, Sun, Moon, Monitor } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button } from "@/components/ui/Button";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { formatCurrency } from "@/lib/format";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CategoryFormModal } from "@/components/settings/CategoryFormModal";
@@ -45,7 +47,12 @@ export function SettingsPage() {
 
         {tab === "categories" && <CategoriesTab />}
         {tab === "methods" && <MethodsTab />}
-        {tab === "data" && <DataTab />}
+        {tab === "data" && (
+          <div className="space-y-4">
+            <OpeningBalanceCard />
+            <DataTab />
+          </div>
+        )}
       </div>
     </>
   );
@@ -353,6 +360,43 @@ function MethodsTab() {
   );
 }
 
+function OpeningBalanceCard() {
+  const openingBalance = useFinanceStore((s) => s.openingBalance);
+  const setOpeningBalance = useFinanceStore((s) => s.setOpeningBalance);
+  const toast = useToast();
+  const [value, setValue] = useState(openingBalance);
+
+  useEffect(() => {
+    setValue(openingBalance);
+  }, [openingBalance]);
+
+  return (
+    <div className="card p-5">
+      <h3 className="font-semibold text-ink-900">Saldo inicial</h3>
+      <p className="text-sm text-ink-400 mb-4">
+        Dinheiro que você já tinha antes do primeiro lançamento. Ele entra no
+        saldo anterior de todo mês e no saldo atual.
+      </p>
+      <div className="max-w-xs">
+        <CurrencyInput value={value} onChange={setValue} allowNegative />
+      </div>
+      <p className="text-xs text-ink-400 mt-2">
+        Salvo hoje: {formatCurrency(openingBalance)}. Use o sinal de menos se
+        você começou no vermelho.
+      </p>
+      <Button
+        className="mt-4"
+        onClick={() => {
+          setOpeningBalance(value);
+          toast.success("Saldo inicial salvo.");
+        }}
+      >
+        Salvar saldo inicial
+      </Button>
+    </div>
+  );
+}
+
 function DataTab() {
   const transactions = useFinanceStore((s) => s.transactions);
   const goals = useFinanceStore((s) => s.goals);
@@ -378,6 +422,10 @@ function DataTab() {
             ? parsed.paymentMethods
             : undefined,
           goals: Array.isArray(parsed.goals) ? parsed.goals : undefined,
+          openingBalance:
+            typeof parsed.openingBalance === "number"
+              ? parsed.openingBalance
+              : undefined,
         });
         syncNow();
         toast.success("Backup importado com sucesso!");
@@ -395,6 +443,7 @@ function DataTab() {
       categories: state.categories,
       paymentMethods: state.paymentMethods,
       goals: state.goals,
+      openingBalance: state.openingBalance,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -410,7 +459,7 @@ function DataTab() {
   };
 
   return (
-    <div className="space-y-4">
+    <>
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-3">
           <Database size={18} className="text-brand-600" />
@@ -460,7 +509,7 @@ function DataTab() {
       <ConfirmDialog
         open={confirmReset}
         title="Apagar todos os dados"
-        message="Isso removerá todos os lançamentos e metas, restaurando as categorias padrão. Esta ação não pode ser desfeita."
+        message="Isso removerá todos os lançamentos, metas e o saldo inicial, restaurando as categorias padrão. Esta ação não pode ser desfeita."
         confirmLabel="Apagar tudo"
         onClose={() => setConfirmReset(false)}
         onConfirm={() => {
@@ -468,6 +517,6 @@ function DataTab() {
           toast.success("Dados apagados.");
         }}
       />
-    </div>
+    </>
   );
 }

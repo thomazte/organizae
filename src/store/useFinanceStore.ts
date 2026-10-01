@@ -19,6 +19,8 @@ interface FinanceStore {
   categories: Category[];
   paymentMethods: PaymentMethod[];
   goals: Goal[];
+  /** Dinheiro que já existia antes do primeiro lançamento. */
+  openingBalance: number;
 
   // Transações
   addTransaction: (data: NewTransaction, until?: Date) => void;
@@ -43,6 +45,7 @@ interface FinanceStore {
   addToGoal: (id: string, amount: number) => void;
 
   // Utilidades
+  setOpeningBalance: (amount: number) => void;
   resetAll: () => void;
   /** Substitui todo o estado (usado pela sincronização e importação). */
   replaceAll: (state: Partial<FinanceState>) => void;
@@ -55,6 +58,7 @@ export const useFinanceStore = create<FinanceStore>()(
       categories: DEFAULT_CATEGORIES,
       paymentMethods: DEFAULT_PAYMENT_METHODS,
       goals: [],
+      openingBalance: 0,
 
       addTransaction: (data, until) =>
         set((state) => {
@@ -154,12 +158,18 @@ export const useFinanceStore = create<FinanceStore>()(
           ),
         })),
 
+      setOpeningBalance: (amount) =>
+        set((state) =>
+          state.openingBalance === amount ? state : { openingBalance: amount }
+        ),
+
       resetAll: () =>
         set({
           transactions: [],
           categories: DEFAULT_CATEGORIES,
           paymentMethods: DEFAULT_PAYMENT_METHODS,
           goals: [],
+          openingBalance: 0,
         }),
 
       replaceAll: (state) =>
@@ -174,6 +184,10 @@ export const useFinanceStore = create<FinanceStore>()(
               ? state.paymentMethods
               : current.paymentMethods,
           goals: state.goals ?? current.goals,
+          openingBalance:
+            typeof state.openingBalance === "number"
+              ? state.openingBalance
+              : current.openingBalance,
         })),
     }),
     {

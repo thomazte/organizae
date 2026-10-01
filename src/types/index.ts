@@ -71,4 +71,9 @@ export interface FinanceState {
   categories: Category[];
   paymentMethods: PaymentMethod[];
   goals: Goal[];
+  /**
+   * Dinheiro que já existia antes do primeiro lançamento.
+   * Entra em todo saldo (anterior, do mês e atual).
+   */
+  openingBalance: number;
 }

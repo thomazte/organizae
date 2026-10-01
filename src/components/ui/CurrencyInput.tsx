@@ -11,30 +11,35 @@ export function CurrencyInput({
   placeholder = "0,00",
   className,
   id,
+  allowNegative = false,
 }: {
   value: number;
   onChange: (value: number) => void;
   placeholder?: string;
   className?: string;
   id?: string;
+  /** Permite saldo negativo (dívida) quando o campo é um saldo, não um lançamento. */
+  allowNegative?: boolean;
 }) {
-  const [text, setText] = useState<string>(value ? formatFromNumber(value) : "");
+  const [text, setText] = useState<string>(formatSigned(value));
 
   useEffect(() => {
     // Sincroniza quando o valor externo muda (ex.: reset de formulário).
-    setText(value ? formatFromNumber(value) : "");
+    setText(formatSigned(value));
   }, [value]);
 
   const handleChange = (raw: string) => {
+    const negative = allowNegative && raw.trim().startsWith("-");
     const digits = raw.replace(/\D/g, "");
     if (!digits) {
-      setText("");
+      setText(negative ? "-" : "");
       onChange(0);
       return;
     }
     const numeric = parseInt(digits, 10) / 100;
-    setText(formatFromNumber(numeric));
-    onChange(numeric);
+    const signed = negative ? -numeric : numeric;
+    setText(formatSigned(signed));
+    onChange(signed);
   };
 
   return (
@@ -44,7 +49,7 @@ export function CurrencyInput({
       </span>
       <input
         id={id}
-        inputMode="numeric"
+        inputMode={allowNegative ? "text" : "numeric"}
         className={cn("input-base pl-9", className)}
         value={text}
         placeholder={placeholder}
@@ -54,9 +59,11 @@ export function CurrencyInput({
   );
 }
 
-function formatFromNumber(value: number): string {
-  return value.toLocaleString("pt-BR", {
+function formatSigned(value: number): string {
+  if (!value) return "";
+  const formatted = Math.abs(value).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return value < 0 ? `-${formatted}` : formatted;
 }

@@ -7,6 +7,7 @@ import {
   TrendingUp,
   TrendingDown,
   PiggyBank,
+  History,
   ArrowUpRight,
   ArrowDownRight,
   CalendarClock,
@@ -25,11 +26,11 @@ import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { TransactionFormModal } from "@/components/transactions/TransactionFormModal";
 import { useFinanceStore } from "@/store/useFinanceStore";
 import {
+  balanceUntil,
   breakdownByCategory,
   filterByInterval,
+  monthBalance,
   monthlySeries,
-  sumTotals,
-  totalBalance,
   upcoming,
 } from "@/lib/analytics";
 import { computeGoalProgress } from "@/lib/goals";
@@ -41,6 +42,7 @@ export function Dashboard() {
   const transactions = useFinanceStore((s) => s.transactions);
   const categories = useFinanceStore((s) => s.categories);
   const goals = useFinanceStore((s) => s.goals);
+  const openingBalance = useFinanceStore((s) => s.openingBalance);
   const profileName = useProfileStore((s) => s.name);
 
   const greeting = greetingForName(profileName);
@@ -55,11 +57,18 @@ export function Dashboard() {
     () => filterByInterval(transactions, monthStart, monthEnd),
     [transactions, monthStart, monthEnd]
   );
-  const monthTotals = useMemo(() => sumTotals(monthTx), [monthTx]);
-  const balance = useMemo(() => totalBalance(transactions), [transactions]);
+  const month = useMemo(
+    () => monthBalance(transactions, refDate, openingBalance),
+    [transactions, refDate, openingBalance]
+  );
+  const today = todayISO();
+  const balance = useMemo(
+    () => balanceUntil(transactions, today, openingBalance),
+    [transactions, today, openingBalance]
+  );
   const series = useMemo(
-    () => monthlySeries(transactions, 6, refDate),
-    [transactions, refDate]
+    () => monthlySeries(transactions, 6, refDate, openingBalance),
+    [transactions, refDate, openingBalance]
   );
   const expenseBreakdown = useMemo(
     () =>
@@ -70,7 +79,6 @@ export function Dashboard() {
     [monthTx, categories]
   );
 
-  const today = todayISO();
   const nextPayments = useMemo(
     () => upcoming(transactions, "expense", today, 4),
     [transactions, today]
@@ -109,31 +117,40 @@ export function Dashboard() {
         </div>
 
         {/* Cartões de resumo */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
           <StatCard
-            label="Saldo do mês"
-            value={formatCurrency(monthTotals.balance)}
-            icon={PiggyBank}
-            accent={monthTotals.balance >= 0 ? "violet" : "red"}
+            label="Saldo anterior"
+            value={formatCurrency(month.previous)}
+            icon={History}
+            accent="ink"
+            hint="Antes deste mês"
           />
           <StatCard
             label="Ganhos do mês"
-            value={formatCurrency(monthTotals.income)}
+            value={formatCurrency(month.income)}
             icon={TrendingUp}
             accent="brand"
           />
           <StatCard
             label="Gastos do mês"
-            value={formatCurrency(monthTotals.expense)}
+            value={formatCurrency(month.expense)}
             icon={TrendingDown}
             accent="red"
+          />
+          <StatCard
+            label="Saldo do mês"
+            value={formatCurrency(month.closing)}
+            icon={PiggyBank}
+            accent={month.closing >= 0 ? "violet" : "red"}
+            hint="Anterior + ganhos − gastos"
           />
           <StatCard
             label="Saldo atual"
             value={formatCurrency(balance)}
             icon={Wallet}
             accent={balance >= 0 ? "brand" : "red"}
-            hint="Acumulado total"
+            hint="Até hoje"
+            className="col-span-2 xl:col-span-1"
           />
         </div>
 
@@ -162,7 +179,7 @@ export function Dashboard() {
                     </h3>
                     <p className="text-xs text-ink-400">Últimos 6 meses</p>
                   </div>
-                  <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-3 text-xs">
                     <span className="flex items-center gap-1.5 text-ink-500">
                       <span className="h-2.5 w-2.5 rounded-full bg-brand-500" />
                       Receitas
@@ -170,6 +187,10 @@ export function Dashboard() {
                     <span className="flex items-center gap-1.5 text-ink-500">
                       <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
                       Despesas
+                    </span>
+                    <span className="flex items-center gap-1.5 text-ink-500">
+                      <span className="h-2.5 w-2.5 rounded-full bg-violet-600" />
+                      Saldo
                     </span>
                   </div>
                 </div>

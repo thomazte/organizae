@@ -7,12 +7,14 @@ export function StatCard({
   icon: Icon,
   accent = "brand",
   hint,
+  className,
 }: {
   label: string;
   value: string;
   icon: LucideIcon;
   accent?: "brand" | "red" | "ink" | "blue" | "violet";
   hint?: string;
+  className?: string;
 }) {
   const accents: Record<string, { bg: string; text: string }> = {
     brand: { bg: "bg-brand-50", text: "text-brand-600" },
@@ -24,7 +26,7 @@ export function StatCard({
   const a = accents[accent];
 
   return (
-    <div className="card p-4 sm:p-5">
+    <div className={cn("card p-4 sm:p-5", className)}>
       <div className="flex items-start justify-between">
         <p className="text-sm font-medium text-ink-500">{label}</p>
         <div

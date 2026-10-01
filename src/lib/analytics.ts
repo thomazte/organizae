@@ -38,9 +38,83 @@ export function filterByInterval(
   });
 }
 
-/** Saldo total acumulado (todas as transações). */
+/**
+ * Soma tudo o que está gravado, inclusive recorrências futuras.
+ * O saldo exibido no app usa `balanceUntil`, que para em hoje.
+ */
 export function totalBalance(transactions: Transaction[]): number {
   return sumTotals(transactions).balance;
+}
+
+/**
+ * Saldo anterior a uma data (exclusive).
+ * Inclui o saldo inicial e ignora lançamentos com `date >= beforeISO`.
+ * As datas ISO (YYYY-MM-DD) são comparáveis como texto.
+ */
+export function balanceBefore(
+  transactions: Transaction[],
+  beforeISO: string,
+  openingBalance = 0
+): number {
+  let income = 0;
+  let expense = 0;
+  for (const t of transactions) {
+    if (t.date >= beforeISO) continue;
+    if (t.type === "income") income += t.amount;
+    else expense += t.amount;
+  }
+  return openingBalance + income - expense;
+}
+
+/**
+ * Saldo realizado até uma data (inclusive).
+ * Lançamentos com data posterior — como recorrências ainda não vencidas — ficam de fora.
+ */
+export function balanceUntil(
+  transactions: Transaction[],
+  untilISO: string,
+  openingBalance = 0
+): number {
+  let income = 0;
+  let expense = 0;
+  for (const t of transactions) {
+    if (t.date > untilISO) continue;
+    if (t.type === "income") income += t.amount;
+    else expense += t.amount;
+  }
+  return openingBalance + income - expense;
+}
+
+export interface MonthBalance {
+  /** Saldo inicial + tudo que aconteceu antes do dia 1. */
+  previous: number;
+  income: number;
+  expense: number;
+  /** Receitas − despesas só deste mês. */
+  result: number;
+  /** Fechamento: previous + result. */
+  closing: number;
+}
+
+/** Fecha um mês carregando o saldo do mês anterior. */
+export function monthBalance(
+  transactions: Transaction[],
+  month: Date,
+  openingBalance = 0
+): MonthBalance {
+  const start = startOfMonth(month);
+  const startISO = format(start, "yyyy-MM-dd");
+  const totals = sumTotals(
+    filterByInterval(transactions, start, endOfMonth(month))
+  );
+  const previous = balanceBefore(transactions, startISO, openingBalance);
+  return {
+    previous,
+    income: totals.income,
+    expense: totals.expense,
+    result: totals.balance,
+    closing: previous + totals.balance,
+  };
 }
 
 export interface CategoryBreakdown {
@@ -84,13 +158,16 @@ export interface MonthlySeriesPoint {
   monthKey: string;
   income: number;
   expense: number;
+  /** Saldo de fechamento daquele mês (saldo inicial + tudo até o último dia). */
+  balance: number;
 }
 
 /** Série dos últimos N meses para o gráfico de entradas x saídas. */
 export function monthlySeries(
   transactions: Transaction[],
   months = 6,
-  reference = new Date()
+  reference = new Date(),
+  openingBalance = 0
 ): MonthlySeriesPoint[] {
   const points: MonthlySeriesPoint[] = [];
   for (let i = months - 1; i >= 0; i--) {
@@ -104,6 +181,7 @@ export function monthlySeries(
       monthKey: format(monthDate, "yyyy-MM"),
       income: totals.income,
       expense: totals.expense,
+      balance: balanceUntil(transactions, format(end, "yyyy-MM-dd"), openingBalance),
     });
   }
   return points;

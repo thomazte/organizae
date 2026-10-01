@@ -1,7 +1,8 @@
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,7 +16,7 @@ export function IncomeExpenseChart({ data }: { data: MonthlySeriesPoint[] }) {
   const t = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+      <ComposedChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
@@ -34,6 +35,16 @@ export function IncomeExpenseChart({ data }: { data: MonthlySeriesPoint[] }) {
           tick={{ fill: t.tick, fontSize: 12 }}
         />
         <YAxis
+          yAxisId="flow"
+          tickLine={false}
+          axisLine={false}
+          width={56}
+          tick={{ fill: t.tick, fontSize: 11 }}
+          tickFormatter={(v) => formatCurrencyShort(Number(v))}
+        />
+        <YAxis
+          yAxisId="balance"
+          orientation="right"
           tickLine={false}
           axisLine={false}
           width={56}
@@ -41,28 +52,38 @@ export function IncomeExpenseChart({ data }: { data: MonthlySeriesPoint[] }) {
           tickFormatter={(v) => formatCurrencyShort(Number(v))}
         />
         <Tooltip
-          formatter={(value: number, name) => [
-            formatCurrency(value),
-            name === "income" ? "Receitas" : "Despesas",
-          ]}
+          formatter={(value: number, name) => [formatCurrency(value), String(name)]}
           labelStyle={{ color: t.label, fontWeight: 600 }}
           contentStyle={t.tooltip}
         />
         <Area
+          yAxisId="flow"
           type="monotone"
           dataKey="income"
+          name="Receitas"
           stroke="#3b82f6"
           strokeWidth={2.5}
           fill="url(#gIncome)"
         />
         <Area
+          yAxisId="flow"
           type="monotone"
           dataKey="expense"
+          name="Despesas"
           stroke="#ef4444"
           strokeWidth={2.5}
           fill="url(#gExpense)"
         />
-      </AreaChart>
+        <Line
+          yAxisId="balance"
+          type="monotone"
+          dataKey="balance"
+          name="Saldo"
+          stroke="#7c3aed"
+          strokeWidth={2.5}
+          dot={false}
+        />
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

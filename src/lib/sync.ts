@@ -50,6 +50,65 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let profileTimer: ReturnType<typeof setTimeout> | null = null;
 let pullTimer: ReturnType<typeof setTimeout> | null = null;
 let focusListenerAttached = false;
+const OPENING_SYNC_KEY = "organizae-opening-synced";
+/** Último saldo inicial confirmado na nuvem. Evita reenviar o mesmo número. */
+let lastPushedOpening: number | null = null;
+
+type StoredProfile = Profile & { openingBalance?: number };
+
+function readRememberedOpening(): number | null {
+  try {
+    const raw = localStorage.getItem(OPENING_SYNC_KEY);
+    if (raw == null || raw === "") return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberOpening(value: number) {
+  lastPushedOpening = value;
+  try {
+    localStorage.setItem(OPENING_SYNC_KEY, String(value));
+  } catch {
+    /* armazenamento indisponível */
+  }
+}
+
+function forgetOpening() {
+  lastPushedOpening = null;
+  try {
+    localStorage.removeItem(OPENING_SYNC_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function buildStoredProfile(): StoredProfile {
+  const { name, avatar } = useProfileStore.getState();
+  const { openingBalance } = useFinanceStore.getState();
+  return { name, avatar, openingBalance };
+}
+
+/**
+ * Escolhe o saldo inicial ao entrar na conta.
+ * Edição local ainda não enviada (diferente do último valor confirmado) prevalece.
+ * Sem edição pendente, a nuvem manda. No primeiro login vindo do modo convidado,
+ * um saldo local diferente de zero também prevalece.
+ */
+function resolveOpeningBalance(
+  local: number,
+  remote: number | undefined,
+  mergeLocalFirst: boolean,
+  remembered: number | null
+): number {
+  const localPending = remembered !== null && local !== remembered;
+  if (typeof remote !== "number") return local;
+  if (localPending) return local;
+  if (mergeLocalFirst && local !== 0) return local;
+  return remote;
+}
 
 function buildSnapshot(): Snapshot {
   const s = useFinanceStore.getState();
@@ -130,6 +189,12 @@ async function syncDiff() {
       await deleteItems(key, toDelete, userId);
       snapshot[key] = next;
     }
+
+    const opening = useFinanceStore.getState().openingBalance;
+    if (opening !== lastPushedOpening) {
+      await pushProfile(userId);
+    }
+
     useSyncStatus.getState().markSynced();
   } catch (err) {
     console.error("[sync] erro ao sincronizar", err);
@@ -179,7 +244,7 @@ async function pullRemote(userId: string): Promise<{
 }
 
 /** Busca o perfil remoto do usuário (ou null). */
-async function pullProfile(userId: string): Promise<Profile | null> {
+async function pullProfile(userId: string): Promise<StoredProfile | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from(TABLES.profiles)
@@ -187,22 +252,23 @@ async function pullProfile(userId: string): Promise<Profile | null> {
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
-  return (data?.data as Profile) ?? null;
+  return (data?.data as StoredProfile) ?? null;
 }
 
-/** Sobe o perfil atual para a nuvem. */
+/** Sobe o perfil atual para a nuvem, junto com o saldo inicial. */
 async function pushProfile(userId: string) {
   if (!supabase) return;
-  const { name, avatar } = useProfileStore.getState();
+  const data = buildStoredProfile();
   const { error } = await supabase.from(TABLES.profiles).upsert(
     {
       user_id: userId,
-      data: { name, avatar } satisfies Profile,
+      data,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" }
   );
   if (error) throw error;
+  rememberOpening(data.openingBalance ?? 0);
 }
 
 /**
@@ -218,8 +284,13 @@ async function pullLatest() {
     if (snapshot) await syncDiff();
 
     const remote = await pullRemote(userId);
+    const remoteProfile = await pullProfile(userId);
     applyingRemote = true;
     useFinanceStore.getState().replaceAll(remote);
+    if (typeof remoteProfile?.openingBalance === "number") {
+      useFinanceStore.getState().setOpeningBalance(remoteProfile.openingBalance);
+      rememberOpening(remoteProfile.openingBalance);
+    }
     applyingRemote = false;
 
     snapshot = buildSnapshot();
@@ -278,6 +349,21 @@ async function startSync(userId: string, mergeLocalFirst = false) {
   useSyncStatus.getState().set("syncing");
 
   try {
+    const remoteProfile = await pullProfile(userId);
+    const remembered = readRememberedOpening();
+    lastPushedOpening = remembered;
+    const localOpening = useFinanceStore.getState().openingBalance;
+    const opening = resolveOpeningBalance(
+      localOpening,
+      remoteProfile?.openingBalance,
+      mergeLocalFirst,
+      remembered
+    );
+
+    applyingRemote = true;
+    useFinanceStore.getState().setOpeningBalance(opening);
+    applyingRemote = false;
+
     if (mergeLocalFirst) {
       const local = useFinanceStore.getState();
       await upsertItems("categories", local.categories, userId);
@@ -293,13 +379,21 @@ async function startSync(userId: string, mergeLocalFirst = false) {
     useFinanceStore.getState().replaceAll(remote);
     applyingRemote = false;
 
-    const remoteProfile = await pullProfile(userId);
     if (remoteProfile && (remoteProfile.name || remoteProfile.avatar)) {
       applyingProfile = true;
-      useProfileStore.getState().setProfile(remoteProfile);
+      useProfileStore.getState().setProfile({
+        name: remoteProfile.name ?? "",
+        avatar: remoteProfile.avatar ?? null,
+      });
       applyingProfile = false;
-    } else {
+    }
+
+    const profileMissing = !remoteProfile || !(remoteProfile.name || remoteProfile.avatar);
+    const openingDiffers = remoteProfile?.openingBalance !== opening;
+    if (profileMissing || openingDiffers) {
       await pushProfile(userId);
+    } else {
+      rememberOpening(opening);
     }
 
     snapshot = buildSnapshot();
@@ -313,6 +407,7 @@ async function startSync(userId: string, mergeLocalFirst = false) {
 function stopSync() {
   currentUserId = null;
   snapshot = null;
+  forgetOpening();
   if (debounceTimer) clearTimeout(debounceTimer);
   if (profileTimer) clearTimeout(profileTimer);
   useSyncStatus.getState().set("idle");

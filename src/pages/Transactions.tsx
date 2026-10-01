@@ -13,7 +13,7 @@ import { TransactionFormModal } from "@/components/transactions/TransactionFormM
 import { DeleteTransactionDialog } from "@/components/transactions/DeleteTransactionDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useFinanceStore } from "@/store/useFinanceStore";
-import { filterByInterval, sumTotals } from "@/lib/analytics";
+import { filterByInterval, monthBalance, sumTotals } from "@/lib/analytics";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Transaction, TransactionType } from "@/types";
 
@@ -22,6 +22,7 @@ type Filter = "all" | TransactionType;
 export function Transactions() {
   const transactions = useFinanceStore((s) => s.transactions);
   const categories = useFinanceStore((s) => s.categories);
+  const openingBalance = useFinanceStore((s) => s.openingBalance);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
   const deleteRecurringGroup = useFinanceStore((s) => s.deleteRecurringGroup);
   const toast = useToast();
@@ -58,7 +59,10 @@ export function Transactions() {
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [monthTx, filter, categoryFilter, search]);
 
-  const totals = useMemo(() => sumTotals(filtered), [filtered]);
+  const month = useMemo(
+    () => monthBalance(transactions, refDate, openingBalance),
+    [transactions, refDate, openingBalance]
+  );
 
   // Agrupa por data.
   const grouped = useMemo(() => {
@@ -102,14 +106,20 @@ export function Transactions() {
 
       <div className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-5xl mx-auto w-full">
         {/* Resumo do período */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="card p-4">
+            <span className="text-xs font-medium text-ink-500">Saldo anterior</span>
+            <p className="mt-1.5 text-lg font-bold text-ink-900 tabular-nums">
+              {formatCurrency(month.previous)}
+            </p>
+          </div>
           <div className="card p-4">
             <div className="flex items-center gap-1.5 text-brand-600">
               <ArrowUpRight size={16} />
               <span className="text-xs font-medium text-ink-500">Receitas</span>
             </div>
             <p className="mt-1.5 text-lg font-bold text-ink-900 tabular-nums">
-              {formatCurrency(totals.income)}
+              {formatCurrency(month.income)}
             </p>
           </div>
           <div className="card p-4">
@@ -118,17 +128,17 @@ export function Transactions() {
               <span className="text-xs font-medium text-ink-500">Despesas</span>
             </div>
             <p className="mt-1.5 text-lg font-bold text-ink-900 tabular-nums">
-              {formatCurrency(totals.expense)}
+              {formatCurrency(month.expense)}
             </p>
           </div>
           <div className="card p-4">
-            <span className="text-xs font-medium text-ink-500">Saldo</span>
+            <span className="text-xs font-medium text-ink-500">Saldo do mês</span>
             <p
               className={`mt-1.5 text-lg font-bold tabular-nums ${
-                totals.balance >= 0 ? "text-brand-600" : "text-red-500"
+                month.closing >= 0 ? "text-brand-600" : "text-red-500"
               }`}
             >
-              {formatCurrency(totals.balance)}
+              {formatCurrency(month.closing)}
             </p>
           </div>
         </div>
