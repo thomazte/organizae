@@ -58,8 +58,8 @@ jobs:
       - name: Configure environment
         run: |
           {
-            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
-            echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}"
+            echo "VITE_SUPABASE_URL=https://tpqopxcnzyrssxkikjgv.supabase.co"
+            echo "VITE_SUPABASE_ANON_KEY=sb_publishable_s_OpyfRebpedrfpD45hvJw_xlOhPDEQ"
           } > .env
 
       - name: Build web app and sync Capacitor
