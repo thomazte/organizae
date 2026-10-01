@@ -8,6 +8,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Category, Transaction } from "@/types";
+import { todayISO } from "@/lib/format";
 
 export interface PeriodTotals {
   income: number;
@@ -46,20 +47,27 @@ export function totalBalance(transactions: Transaction[]): number {
   return sumTotals(transactions).balance;
 }
 
+/** A data mais recente que já pode entrar na conta: o próprio limite, ou hoje. */
+function realizedThrough(untilISO: string, asOf: string): string {
+  return untilISO < asOf ? untilISO : asOf;
+}
+
 /**
  * Saldo anterior a uma data (exclusive).
  * Inclui o saldo inicial e ignora lançamentos com `date >= beforeISO`.
+ * Lançamentos posteriores a `asOf` também ficam de fora.
  * As datas ISO (YYYY-MM-DD) são comparáveis como texto.
  */
 export function balanceBefore(
   transactions: Transaction[],
   beforeISO: string,
-  openingBalance = 0
+  openingBalance = 0,
+  asOf = todayISO()
 ): number {
   let income = 0;
   let expense = 0;
   for (const t of transactions) {
-    if (t.date >= beforeISO) continue;
+    if (t.date >= beforeISO || t.date > asOf) continue;
     if (t.type === "income") income += t.amount;
     else expense += t.amount;
   }
@@ -96,24 +104,39 @@ export interface MonthBalance {
   closing: number;
 }
 
-/** Fecha um mês carregando o saldo do mês anterior. */
+/**
+ * Fecha um mês carregando o saldo do mês anterior.
+ * No mês corrente (e nos futuros) só entram lançamentos com data até hoje.
+ * Um gasto ou ganho marcado para amanhã fica de fora até esse dia chegar.
+ */
 export function monthBalance(
   transactions: Transaction[],
   month: Date,
-  openingBalance = 0
+  openingBalance = 0,
+  asOf = todayISO()
 ): MonthBalance {
-  const start = startOfMonth(month);
-  const startISO = format(start, "yyyy-MM-dd");
-  const totals = sumTotals(
-    filterByInterval(transactions, start, endOfMonth(month))
-  );
-  const previous = balanceBefore(transactions, startISO, openingBalance);
+  const startISO = format(startOfMonth(month), "yyyy-MM-dd");
+  const endISO = format(endOfMonth(month), "yyyy-MM-dd");
+  const through = realizedThrough(endISO, asOf);
+
+  let income = 0;
+  let expense = 0;
+  if (through >= startISO) {
+    for (const t of transactions) {
+      if (t.date < startISO || t.date > through) continue;
+      if (t.type === "income") income += t.amount;
+      else expense += t.amount;
+    }
+  }
+
+  const previous = balanceBefore(transactions, startISO, openingBalance, asOf);
+  const result = income - expense;
   return {
     previous,
-    income: totals.income,
-    expense: totals.expense,
-    result: totals.balance,
-    closing: previous + totals.balance,
+    income,
+    expense,
+    result,
+    closing: previous + result,
   };
 }
 
@@ -174,14 +197,18 @@ export function monthlySeries(
     const monthDate = subMonths(reference, i);
     const start = startOfMonth(monthDate);
     const end = endOfMonth(monthDate);
-    const inMonth = filterByInterval(transactions, start, end);
+    const endISO = format(end, "yyyy-MM-dd");
+    const through = realizedThrough(endISO, todayISO());
+    const inMonth = filterByInterval(transactions, start, end).filter(
+      (t) => t.date <= through
+    );
     const totals = sumTotals(inMonth);
     points.push({
       label: format(monthDate, "MMM", { locale: ptBR }),
       monthKey: format(monthDate, "yyyy-MM"),
       income: totals.income,
       expense: totals.expense,
-      balance: balanceUntil(transactions, format(end, "yyyy-MM-dd"), openingBalance),
+      balance: balanceUntil(transactions, through, openingBalance),
     });
   }
   return points;

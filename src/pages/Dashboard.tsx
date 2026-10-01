@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { endOfMonth, startOfMonth } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import {
   Plus,
   Wallet,
@@ -73,10 +73,10 @@ export function Dashboard() {
   const expenseBreakdown = useMemo(
     () =>
       breakdownByCategory(
-        monthTx.filter((t) => t.type === "expense"),
+        monthTx.filter((t) => t.type === "expense" && t.date <= today),
         categories
       ).slice(0, 6),
-    [monthTx, categories]
+    [monthTx, categories, today]
   );
 
   const nextPayments = useMemo(
@@ -130,12 +130,14 @@ export function Dashboard() {
             value={formatCurrency(month.income)}
             icon={TrendingUp}
             accent="brand"
+            hint={format(monthEnd, "yyyy-MM-dd") >= today ? "Até hoje" : undefined}
           />
           <StatCard
             label="Gastos do mês"
             value={formatCurrency(month.expense)}
             icon={TrendingDown}
             accent="red"
+            hint={format(monthEnd, "yyyy-MM-dd") >= today ? "Até hoje" : undefined}
           />
           <StatCard
             label="Saldo do mês"

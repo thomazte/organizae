@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { endOfMonth, startOfMonth } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import { Plus, Search, ArrowUpRight, ArrowDownRight, Receipt } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button } from "@/components/ui/Button";
@@ -14,7 +14,7 @@ import { DeleteTransactionDialog } from "@/components/transactions/DeleteTransac
 import { useToast } from "@/components/ui/Toast";
 import { useFinanceStore } from "@/store/useFinanceStore";
 import { filterByInterval, monthBalance, sumTotals } from "@/lib/analytics";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, todayISO } from "@/lib/format";
 import type { Transaction, TransactionType } from "@/types";
 
 type Filter = "all" | TransactionType;
@@ -63,6 +63,8 @@ export function Transactions() {
     () => monthBalance(transactions, refDate, openingBalance),
     [transactions, refDate, openingBalance]
   );
+  const today = todayISO();
+  const monthStillOpen = format(endOfMonth(refDate), "yyyy-MM-dd") >= today;
 
   // Agrupa por data.
   const grouped = useMemo(() => {
@@ -106,6 +108,11 @@ export function Transactions() {
 
       <div className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-5xl mx-auto w-full">
         {/* Resumo do período */}
+        {monthStillOpen && (
+          <p className="text-xs text-ink-400">
+            Receitas e despesas entram na conta até hoje. As datas futuras continuam na lista.
+          </p>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="card p-4">
             <span className="text-xs font-medium text-ink-500">Saldo anterior</span>
