@@ -26,7 +26,7 @@ export function StatCard({
   const a = accents[accent];
 
   return (
-    <div className={cn("card p-4 sm:p-5", className)}>
+    <div className={cn("card min-w-0 p-4 sm:p-5", className)}>
       <div className="flex items-start justify-between">
         <p className="text-sm font-medium text-ink-500">{label}</p>
         <div
@@ -39,7 +39,7 @@ export function StatCard({
           <Icon size={18} />
         </div>
       </div>
-      <p className="mt-3 text-2xl font-bold text-ink-900 tracking-tight">
+      <p className="mt-3 text-lg font-bold leading-tight tracking-tight text-ink-900 tabular-nums sm:text-xl xl:text-2xl">
         {value}
       </p>
       {hint && <p className="mt-1 text-xs text-ink-400">{hint}</p>}
