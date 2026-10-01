@@ -20,6 +20,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, todayISO } from "@/lib/format";
 import { PickerSheet } from "@/components/ui/PickerSheet";
 import { Button } from "@/components/ui/Button";
+import { MonthYearGrid } from "@/components/shared/MonthYearGrid";
 
 const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
 
@@ -35,6 +36,7 @@ export function DatePickerField({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [pickingMonth, setPickingMonth] = useState(false);
   const selected = useMemo(() => {
     if (!value) return new Date();
     const parsed = parseISO(value);
@@ -45,6 +47,7 @@ export function DatePickerField({
 
   const openPicker = () => {
     setViewDate(selected);
+    setPickingMonth(false);
     setOpen(true);
   };
 
@@ -98,7 +101,10 @@ export function DatePickerField({
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setViewDate(new Date())}
+              onClick={() => {
+                setViewDate(new Date());
+                setPickingMonth(false);
+              }}
               className="text-sm font-medium text-ink-500 hover:text-ink-700 transition-colors"
             >
               Ir para hoje
@@ -120,9 +126,21 @@ export function DatePickerField({
               >
                 <ChevronLeft size={18} />
               </button>
-              <span className="px-2 text-sm font-medium text-ink-700 min-w-[8.5rem] text-center select-none">
+              <button
+                type="button"
+                onClick={() => setPickingMonth((open) => !open)}
+                className="px-2 h-8 rounded-lg inline-flex items-center justify-center gap-1 text-sm font-medium text-ink-700 min-w-[8.5rem] hover:bg-ink-100 transition-colors"
+                aria-label="Escolher mês e ano"
+              >
                 {monthLabel}
-              </span>
+                <ChevronDown
+                  size={14}
+                  className={cn(
+                    "text-ink-400 transition-transform",
+                    pickingMonth && "rotate-180"
+                  )}
+                />
+              </button>
               <button
                 type="button"
                 onClick={() => setViewDate(addMonths(viewDate, 1))}
@@ -134,6 +152,22 @@ export function DatePickerField({
             </div>
           </div>
 
+          {pickingMonth ? (
+            <MonthYearGrid
+              year={viewDate.getFullYear()}
+              selectedMonth={selected.getMonth()}
+              selectedYear={selected.getFullYear()}
+              currentMonth={new Date().getMonth()}
+              currentYear={new Date().getFullYear()}
+              onYearChange={(year) =>
+                setViewDate(new Date(year, viewDate.getMonth(), 1))
+              }
+              onSelectMonth={(monthIndex) => {
+                setViewDate(new Date(viewDate.getFullYear(), monthIndex, 1));
+                setPickingMonth(false);
+              }}
+            />
+          ) : (
           <div className="grid grid-cols-7 gap-1.5 text-center">
             {WEEKDAYS.map((day, i) => (
               <span
@@ -169,6 +203,7 @@ export function DatePickerField({
               );
             })}
           </div>
+          )}
         </div>
       </PickerSheet>
     </>
