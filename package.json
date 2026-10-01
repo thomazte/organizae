@@ -1,7 +1,7 @@
 {
   "name": "organizae-planner-financeiro",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.7",
   "type": "module",
   "description": "Planner Financeiro pessoal completo, moderno e responsivo.",
   "license": "MIT",
