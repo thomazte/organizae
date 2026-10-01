@@ -183,7 +183,7 @@ export function Goals() {
                     className="mt-4 w-full"
                     onClick={() => setDepositGoal(goal)}
                   >
-                    <PiggyBank size={17} /> Atualizar guardado
+                    <PiggyBank size={17} /> Aportar ou resgatar
                   </Button>
                 </div>
               );

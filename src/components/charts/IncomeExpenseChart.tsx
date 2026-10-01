@@ -2,6 +2,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -10,6 +11,38 @@ import {
 import type { MonthlySeriesPoint } from "@/lib/analytics";
 import { formatCurrency, formatCurrencyShort } from "@/lib/format";
 import { useChartTheme } from "./useChartTheme";
+
+function BalanceTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: MonthlySeriesPoint }>;
+}) {
+  const point = payload?.[0]?.payload;
+  const theme = useChartTheme();
+  if (!active || !point) return null;
+
+  const rows = [
+    ["Receitas", point.income],
+    ["Despesas", point.expense],
+    ["Saldo do mês", point.balance],
+    ["Saldo acumulado", point.cumulative],
+  ] as const;
+
+  return (
+    <div style={theme.tooltip} className="px-3 py-2">
+      <p style={{ color: theme.label, fontWeight: 600, marginBottom: 4 }}>
+        {point.label}
+      </p>
+      {rows.map(([label, value]) => (
+        <p key={label} className="text-[13px] tabular-nums">
+          {label}: {formatCurrency(value)}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 export function IncomeExpenseChart({ data }: { data: MonthlySeriesPoint[] }) {
   const t = useChartTheme();
@@ -34,21 +67,25 @@ export function IncomeExpenseChart({ data }: { data: MonthlySeriesPoint[] }) {
           tick={{ fill: t.tick, fontSize: 12 }}
         />
         <YAxis
+          yAxisId="month"
           tickLine={false}
           axisLine={false}
           width={56}
           tick={{ fill: t.tick, fontSize: 11 }}
           tickFormatter={(v) => formatCurrencyShort(Number(v))}
         />
-        <Tooltip
-          formatter={(value: number, name) => [
-            formatCurrency(value),
-            name === "income" ? "Receitas" : "Despesas",
-          ]}
-          labelStyle={{ color: t.label, fontWeight: 600 }}
-          contentStyle={t.tooltip}
+        <YAxis
+          yAxisId="cumulative"
+          orientation="right"
+          tickLine={false}
+          axisLine={false}
+          width={56}
+          tick={{ fill: t.tick, fontSize: 11 }}
+          tickFormatter={(v) => formatCurrencyShort(Number(v))}
         />
+        <Tooltip content={<BalanceTooltip />} />
         <Area
+          yAxisId="month"
           type="monotone"
           dataKey="income"
           stroke="#3b82f6"
@@ -56,11 +93,20 @@ export function IncomeExpenseChart({ data }: { data: MonthlySeriesPoint[] }) {
           fill="url(#gIncome)"
         />
         <Area
+          yAxisId="month"
           type="monotone"
           dataKey="expense"
           stroke="#ef4444"
           strokeWidth={2.5}
           fill="url(#gExpense)"
+        />
+        <Line
+          yAxisId="cumulative"
+          type="monotone"
+          dataKey="cumulative"
+          stroke="#7c3aed"
+          strokeWidth={2.5}
+          dot={false}
         />
       </AreaChart>
     </ResponsiveContainer>

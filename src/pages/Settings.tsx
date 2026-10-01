@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Pencil, Trash2, Database, Sun, Moon, Monitor } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button } from "@/components/ui/Button";
@@ -12,15 +13,26 @@ import { useThemeStore, type ThemePreference } from "@/store/useTheme";
 import { useProfileStore } from "@/store/useProfile";
 import { useProfileModal } from "@/store/useProfileModal";
 import { Avatar } from "@/components/account/Avatar";
+import { RemindersCard } from "@/components/settings/RemindersCard";
+import { BudgetsTab } from "@/components/settings/BudgetsTab";
 import { syncNow } from "@/lib/sync";
 import { getIcon } from "@/lib/icons";
 import { cn } from "@/lib/cn";
 import type { Category, PaymentMethod } from "@/types";
 
-type Tab = "categories" | "methods" | "data";
+type Tab = "categories" | "methods" | "budgets" | "data";
+
+const TABS: Tab[] = ["categories", "methods", "budgets", "data"];
+
+function tabFromQuery(value: string | null): Tab {
+  if (value === "orcamentos") return "budgets";
+  if (value && TABS.includes(value as Tab)) return value as Tab;
+  return "categories";
+}
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("categories");
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => tabFromQuery(params.get("aba")));
 
   return (
     <>
@@ -33,18 +45,22 @@ export function SettingsPage() {
 
         <AppearanceCard />
 
+        <RemindersCard />
+
         <SegmentedControl
           value={tab}
           onChange={setTab}
           options={[
             { value: "categories", label: "Categorias" },
             { value: "methods", label: "Formas" },
+            { value: "budgets", label: "Orçamentos" },
             { value: "data", label: "Dados" },
           ]}
         />
 
         {tab === "categories" && <CategoriesTab />}
         {tab === "methods" && <MethodsTab />}
+        {tab === "budgets" && <BudgetsTab />}
         {tab === "data" && <DataTab />}
       </div>
     </>
@@ -378,6 +394,7 @@ function DataTab() {
             ? parsed.paymentMethods
             : undefined,
           goals: Array.isArray(parsed.goals) ? parsed.goals : undefined,
+          budgets: Array.isArray(parsed.budgets) ? parsed.budgets : undefined,
         });
         syncNow();
         toast.success("Backup importado com sucesso!");
@@ -395,6 +412,7 @@ function DataTab() {
       categories: state.categories,
       paymentMethods: state.paymentMethods,
       goals: state.goals,
+      budgets: state.budgets,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {

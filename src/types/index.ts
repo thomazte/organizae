@@ -34,6 +34,9 @@ export interface PaymentMethod {
   system?: boolean;
 }
 
+/** Movimento de caixa ligado a uma meta. */
+export type GoalMovement = "deposit" | "withdraw";
+
 export interface Transaction {
   id: string;
   type: TransactionType;
@@ -49,6 +52,14 @@ export interface Transaction {
   recurrence?: RecurrenceFrequency;
   /** Id que agrupa todos os lançamentos gerados da mesma recorrência. */
   recurringGroupId?: string;
+  /** Ocorrência pulada: fica no extrato, mas não entra em saldos nem lembretes. */
+  skipped?: boolean;
+  /** Ocorrência pausada junto com a série, a partir de uma data. */
+  seriesPaused?: boolean;
+  /** Meta afetada por este lançamento. */
+  goalId?: string;
+  /** Aporte (sai do saldo) ou resgate (volta para o saldo). */
+  goalMovement?: GoalMovement;
   createdAt: string;
 }
 
@@ -56,7 +67,13 @@ export interface Goal {
   id: string;
   name: string;
   targetAmount: number;
+  /** Total guardado (valor inicial + aportes − resgates). */
   savedAmount: number;
+  /**
+   * Valor já guardado antes de registrar aportes no extrato.
+   * Quando ausente, o app usa savedAmount como semente.
+   */
+  openingAmount?: number;
   /** Data alvo no formato ISO (YYYY-MM-DD). */
   deadline: string;
   startDate: string;
@@ -66,9 +83,17 @@ export interface Goal {
   createdAt: string;
 }
 
+/** Limite mensal de gastos de uma categoria. */
+export interface CategoryBudget {
+  id: string;
+  categoryId: string;
+  limit: number;
+}
+
 export interface FinanceState {
   transactions: Transaction[];
   categories: Category[];
   paymentMethods: PaymentMethod[];
   goals: Goal[];
+  budgets: CategoryBudget[];
 }

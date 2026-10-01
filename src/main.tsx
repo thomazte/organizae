@@ -7,6 +7,7 @@ import { initTheme } from "./store/useTheme";
 import { useAuthStore } from "./store/useAuth";
 import { attachSync } from "./lib/sync";
 import { initNativeShell } from "./lib/native";
+import { attachReminders } from "./lib/reminders";
 
 // Tema: aplica preferência e escuta mudanças do sistema (modo automático).
 initTheme();
@@ -17,6 +18,7 @@ void initNativeShell();
 // Inicializa autenticação e sincronização (no-op se a nuvem não estiver configurada).
 useAuthStore.getState().init();
 attachSync();
+attachReminders();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

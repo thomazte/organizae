@@ -9,6 +9,8 @@ import { IconColorPicker } from "@/components/shared/IconColorPicker";
 import { useToast } from "@/components/ui/Toast";
 import { useFinanceStore } from "@/store/useFinanceStore";
 import { todayISO } from "@/lib/format";
+import { movementNet } from "@/lib/goals";
+import { roundMoney } from "@/lib/money";
 import type { Goal } from "@/types";
 
 export function GoalFormModal({
@@ -22,6 +24,7 @@ export function GoalFormModal({
 }) {
   const addGoal = useFinanceStore((s) => s.addGoal);
   const updateGoal = useFinanceStore((s) => s.updateGoal);
+  const transactions = useFinanceStore((s) => s.transactions);
   const toast = useToast();
   const isEditing = Boolean(editing);
 
@@ -71,10 +74,18 @@ export function GoalFormModal({
     }
 
     if (isEditing && editing) {
+      const net = movementNet(editing.id, transactions);
+      const openingAmount = roundMoney(savedAmount - net);
+      if (openingAmount < -0.001) {
+        toast.error(
+          "Esse total fica abaixo dos aportes já lançados. Use resgate para tirar dinheiro da meta."
+        );
+        return;
+      }
       updateGoal(editing.id, {
         name: name.trim(),
         targetAmount,
-        savedAmount,
+        openingAmount: Math.max(0, openingAmount),
         deadline,
         notes: notes.trim() || undefined,
         color,
@@ -86,6 +97,7 @@ export function GoalFormModal({
         name: name.trim(),
         targetAmount,
         savedAmount,
+        openingAmount: savedAmount,
         deadline,
         startDate: todayISO(),
         notes: notes.trim() || undefined,
@@ -128,7 +140,10 @@ export function GoalFormModal({
           <Field label="Valor total">
             <CurrencyInput value={targetAmount} onChange={setTargetAmount} />
           </Field>
-          <Field label="Já guardado">
+          <Field
+            label="Já guardado"
+            hint="Valor inicial, sem lançamento. Aportes e resgates entram no extrato e no saldo."
+          >
             <CurrencyInput value={savedAmount} onChange={setSavedAmount} />
           </Field>
         </div>

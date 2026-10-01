@@ -25,5 +25,6 @@ export const TABLES = {
   paymentMethods: "payment_methods",
   transactions: "transactions",
   goals: "goals",
+  budgets: "budgets",
   profiles: "profiles",
 } as const;

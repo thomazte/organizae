@@ -24,6 +24,7 @@ export function Transactions() {
   const categories = useFinanceStore((s) => s.categories);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
   const deleteRecurringGroup = useFinanceStore((s) => s.deleteRecurringGroup);
+  const endSeriesFrom = useFinanceStore((s) => s.endSeriesFrom);
   const toast = useToast();
 
   const [refDate, setRefDate] = useState(new Date());
@@ -240,7 +241,12 @@ export function Transactions() {
         }}
         onDeleteSeries={(t) => {
           if (t.recurringGroupId) deleteRecurringGroup(t.recurringGroupId);
+          else deleteTransaction(t.id);
           toast.success("Série recorrente excluída.");
+        }}
+        onEndSeries={(t) => {
+          endSeriesFrom(t.id);
+          toast.success("Ocorrências a partir desta foram excluídas.");
         }}
       />
     </>

@@ -1,5 +1,30 @@
 import { addMonths, differenceInCalendarMonths, format, isPast, parseISO } from "date-fns";
-import type { Goal } from "@/types";
+import type { Goal, Transaction } from "@/types";
+import { isCountable } from "@/lib/activity";
+import { roundMoney } from "@/lib/money";
+
+/** Soma aportes e resgates que ainda contam no caixa. */
+export function movementNet(goalId: string, transactions: Transaction[]): number {
+  let net = 0;
+  for (const t of transactions) {
+    if (t.goalId !== goalId || !t.goalMovement || !isCountable(t)) continue;
+    net += t.goalMovement === "deposit" ? t.amount : -t.amount;
+  }
+  return roundMoney(net);
+}
+
+/** Recalcula savedAmount a partir do valor inicial e dos lançamentos ligados. */
+export function recomputeGoals(goals: Goal[], transactions: Transaction[]): Goal[] {
+  return goals.map((goal) => {
+    const opening = goal.openingAmount ?? goal.savedAmount ?? 0;
+    const saved = roundMoney(opening + movementNet(goal.id, transactions));
+    return {
+      ...goal,
+      openingAmount: opening,
+      savedAmount: Math.max(0, saved),
+    };
+  });
+}
 
 export interface GoalProgress {
   /** Percentual concluído (0-100). */

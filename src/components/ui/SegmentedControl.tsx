@@ -19,7 +19,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       className={cn(
-        "inline-flex bg-ink-100 rounded-xl p-1 gap-1",
+        "inline-flex flex-wrap max-w-full bg-ink-100 rounded-xl p-1 gap-1",
         className
       )}
     >

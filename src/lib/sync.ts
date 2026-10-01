@@ -3,7 +3,7 @@ import { supabase, TABLES } from "@/lib/supabase";
 import { useFinanceStore } from "@/store/useFinanceStore";
 import { useAuthStore } from "@/store/useAuth";
 import { useProfileStore, type Profile } from "@/store/useProfile";
-import type { Category, Goal, PaymentMethod, Transaction } from "@/types";
+import type { Category, CategoryBudget, Goal, PaymentMethod, Transaction } from "@/types";
 
 /* -------------------------------------------------------------------------- */
 /* Status de sincronização (para feedback na UI)                              */
@@ -29,16 +29,22 @@ export const useSyncStatus = create<SyncStatusStore>((set) => ({
 /* Motor de sincronização                                                     */
 /* -------------------------------------------------------------------------- */
 
-type EntityKey = "categories" | "paymentMethods" | "transactions" | "goals";
+type EntityKey =
+  | "categories"
+  | "paymentMethods"
+  | "transactions"
+  | "goals"
+  | "budgets";
 
 const TABLE_BY_KEY: Record<EntityKey, string> = {
   categories: TABLES.categories,
   paymentMethods: TABLES.paymentMethods,
   transactions: TABLES.transactions,
   goals: TABLES.goals,
+  budgets: TABLES.budgets,
 };
 
-type AnyItem = Category | PaymentMethod | Transaction | Goal;
+type AnyItem = Category | PaymentMethod | Transaction | Goal | CategoryBudget;
 type Snapshot = Record<EntityKey, Map<string, string>>;
 
 let currentUserId: string | null = null;
@@ -63,6 +69,7 @@ function buildSnapshot(): Snapshot {
     paymentMethods: map(s.paymentMethods),
     transactions: map(s.transactions),
     goals: map(s.goals),
+    budgets: map(s.budgets),
   };
 }
 
@@ -105,6 +112,7 @@ async function syncDiff() {
     "paymentMethods",
     "transactions",
     "goals",
+    "budgets",
   ];
 
   useSyncStatus.getState().set("syncing");
@@ -150,12 +158,14 @@ async function pullRemote(userId: string): Promise<{
   paymentMethods: PaymentMethod[];
   transactions: Transaction[];
   goals: Goal[];
+  budgets: CategoryBudget[];
 }> {
   const empty = {
     categories: [] as Category[],
     paymentMethods: [] as PaymentMethod[],
     transactions: [] as Transaction[],
     goals: [] as Goal[],
+    budgets: [] as CategoryBudget[],
   };
   if (!supabase) return empty;
 
@@ -164,6 +174,7 @@ async function pullRemote(userId: string): Promise<{
     "paymentMethods",
     "transactions",
     "goals",
+    "budgets",
   ];
   const result = { ...empty };
 
@@ -284,6 +295,7 @@ async function startSync(userId: string, mergeLocalFirst = false) {
       await upsertItems("paymentMethods", local.paymentMethods, userId);
       await upsertItems("transactions", local.transactions, userId);
       await upsertItems("goals", local.goals, userId);
+      await upsertItems("budgets", local.budgets, userId);
     } else if (snapshot) {
       await syncDiff();
     }

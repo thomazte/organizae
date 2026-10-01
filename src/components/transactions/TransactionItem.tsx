@@ -23,9 +23,15 @@ export function TransactionItem({
   const method = methods.find((m) => m.id === transaction.paymentMethodId);
   const Icon = getIcon(category?.icon);
   const isIncome = transaction.type === "income";
+  const inactive = Boolean(transaction.skipped || transaction.seriesPaused);
+  const badge = transaction.skipped
+    ? "Pulado"
+    : transaction.seriesPaused
+      ? "Pausado"
+      : null;
 
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className={cn("flex items-center gap-3 py-3", inactive && "opacity-60")}>
       <div
         className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
         style={{
@@ -44,6 +50,11 @@ export function TransactionItem({
           {transaction.isRecurring && (
             <Repeat size={13} className="text-ink-300 shrink-0" />
           )}
+          {badge && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-400 shrink-0">
+              {badge}
+            </span>
+          )}
         </div>
         <p className="text-xs text-ink-400 truncate">
           {category?.name}
@@ -55,6 +66,7 @@ export function TransactionItem({
         <p
           className={cn(
             "text-sm font-semibold tabular-nums",
+            inactive && "line-through decoration-ink-300",
             isIncome ? "text-brand-600" : "text-ink-800"
           )}
         >

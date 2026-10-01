@@ -30,13 +30,24 @@ export function TransactionFormModal({
   initialType = "expense",
   editing = null,
 }: Props) {
+  const transactions = useFinanceStore((s) => s.transactions);
   const categories = useFinanceStore((s) => s.categories);
   const paymentMethods = useFinanceStore((s) => s.paymentMethods);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   const updateTransaction = useFinanceStore((s) => s.updateTransaction);
+  const updateSeriesFrom = useFinanceStore((s) => s.updateSeriesFrom);
+  const toggleSkip = useFinanceStore((s) => s.toggleSkip);
+  const pauseSeriesFrom = useFinanceStore((s) => s.pauseSeriesFrom);
+  const resumeSeries = useFinanceStore((s) => s.resumeSeries);
   const toast = useToast();
 
   const isEditing = Boolean(editing);
+  const seriesHasPause = Boolean(
+    editing?.recurringGroupId &&
+      transactions.some(
+        (t) => t.recurringGroupId === editing.recurringGroupId && t.seriesPaused
+      )
+  );
 
   const [type, setType] = useState<TransactionType>(initialType);
   const [name, setName] = useState("");
@@ -49,6 +60,7 @@ export function TransactionFormModal({
   const [recurrence, setRecurrence] = useState<RecurrenceFrequency>("monthly");
   const [noEndDate, setNoEndDate] = useState(true);
   const [until, setUntil] = useState("");
+  const [applyForward, setApplyForward] = useState(false);
 
   const filteredCategories = useMemo(
     () => categories.filter((c) => c.type === type),
@@ -79,6 +91,7 @@ export function TransactionFormModal({
       setIsRecurring(editing.isRecurring);
       setRecurrence((editing.recurrence as RecurrenceFrequency) ?? "monthly");
       setUntil("");
+      setApplyForward(false);
     } else {
       setType(initialType);
       setName("");
@@ -130,7 +143,7 @@ export function TransactionFormModal({
     }
 
     if (isEditing && editing) {
-      updateTransaction(editing.id, {
+      const patch = {
         type,
         name: name.trim(),
         amount,
@@ -140,8 +153,14 @@ export function TransactionFormModal({
         notes: notes.trim() || undefined,
         isRecurring,
         recurrence: isRecurring ? recurrence : undefined,
-      });
-      toast.success("Lançamento atualizado!");
+      };
+      if (applyForward && editing.recurringGroupId) {
+        updateSeriesFrom(editing.id, patch);
+        toast.success("Este lançamento e os próximos foram atualizados.");
+      } else {
+        updateTransaction(editing.id, patch);
+        toast.success("Lançamento atualizado!");
+      }
       onClose();
       return;
     }
@@ -315,10 +334,67 @@ export function TransactionFormModal({
               )}
             </div>
           )}
-          {isEditing && isRecurring && (
-            <p className="text-xs text-ink-400">
-              A edição altera apenas este lançamento da série.
-            </p>
+          {isEditing && editing?.recurringGroupId && (
+            <div className="space-y-3">
+              <Switch
+                checked={applyForward}
+                onChange={setApplyForward}
+                label="Aplicar neste e nos próximos"
+                description="Nome, valor, categoria e forma valem daqui para a frente. A data muda só neste."
+              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    toggleSkip(editing.id);
+                    toast.success(
+                      editing.skipped
+                        ? "Lançamento restaurado."
+                        : "Este mês foi pulado."
+                    );
+                    onClose();
+                  }}
+                >
+                  {editing.skipped ? "Restaurar este" : "Pular este"}
+                </Button>
+                {seriesHasPause ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (editing.recurringGroupId) {
+                        resumeSeries(editing.recurringGroupId);
+                      }
+                      toast.success("Série retomada.");
+                      onClose();
+                    }}
+                  >
+                    Retomar série
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      pauseSeriesFrom(editing.id);
+                      toast.success("Série pausada a partir deste lançamento.");
+                      onClose();
+                    }}
+                  >
+                    Pausar a partir deste
+                  </Button>
+                )}
+              </div>
+              {!applyForward && (
+                <p className="text-xs text-ink-400">
+                  Sem a opção acima, salvar altera só este lançamento. Para apagar os próximos, use excluir.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>

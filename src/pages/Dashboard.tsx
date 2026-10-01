@@ -20,6 +20,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { MonthSelector } from "@/components/shared/MonthSelector";
 import { StatCard } from "@/components/shared/StatCard";
 import { IncomeExpenseChart } from "@/components/charts/IncomeExpenseChart";
+import { BudgetMonthCard } from "@/components/budgets/BudgetMonthCard";
 import { CategoryDonut } from "@/components/charts/CategoryDonut";
 import { TransactionItem } from "@/components/transactions/TransactionItem";
 import { TransactionFormModal } from "@/components/transactions/TransactionFormModal";
@@ -155,14 +156,17 @@ export function Dashboard() {
             {/* Gráficos */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="card p-5 lg:col-span-2">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-start justify-between mb-2 gap-3 flex-wrap">
                   <div>
                     <h3 className="font-semibold text-ink-900">
                       Entradas x Saídas
                     </h3>
-                    <p className="text-xs text-ink-400">Últimos 6 meses</p>
+                    <p className="text-xs text-ink-400">
+                      Últimos 6 meses · saldo acumulado{" "}
+                      {formatCurrency(series[series.length - 1]?.cumulative ?? 0)}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-3 text-xs flex-wrap justify-end">
                     <span className="flex items-center gap-1.5 text-ink-500">
                       <span className="h-2.5 w-2.5 rounded-full bg-brand-500" />
                       Receitas
@@ -170,6 +174,10 @@ export function Dashboard() {
                     <span className="flex items-center gap-1.5 text-ink-500">
                       <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
                       Despesas
+                    </span>
+                    <span className="flex items-center gap-1.5 text-ink-500">
+                      <span className="h-2.5 w-2.5 rounded-full bg-violet-600" />
+                      Saldo acumulado
                     </span>
                   </div>
                 </div>
@@ -234,6 +242,8 @@ export function Dashboard() {
             </div>
           </>
         )}
+
+        <BudgetMonthCard month={refDate} />
 
         {/* Metas */}
         <div className="card p-5">

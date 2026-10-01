@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "vitest run",
     "cap:sync": "npm run build && npx cap sync android",
     "android:apk": "npm run cap:sync && cd android && .\\gradlew.bat assembleDebug && copy /Y app\\build\\outputs\\apk\\debug\\app-debug.apk ..\\organizaê.apk",
     "android:open": "npx cap open android"
@@ -17,6 +18,7 @@
   "dependencies": {
     "@capacitor/android": "^8.4.0",
     "@capacitor/core": "^8.4.0",
+    "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/status-bar": "^8.0.2",
     "@supabase/supabase-js": "^2.108.1",
     "date-fns": "^4.1.0",
@@ -37,6 +39,7 @@
     "@vitejs/plugin-react": "^4.3.3",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.3",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "vitest": "^5.0.3"
   }
 }

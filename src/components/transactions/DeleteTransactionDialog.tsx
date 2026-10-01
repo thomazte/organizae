@@ -8,11 +8,13 @@ export function DeleteTransactionDialog({
   onClose,
   onDeleteOne,
   onDeleteSeries,
+  onEndSeries,
 }: {
   transaction: Transaction | null;
   onClose: () => void;
   onDeleteOne: (t: Transaction) => void;
   onDeleteSeries: (t: Transaction) => void;
+  onEndSeries: (t: Transaction) => void;
 }) {
   const open = Boolean(transaction);
   const isSeries = Boolean(transaction?.recurringGroupId);
@@ -44,6 +46,15 @@ export function DeleteTransactionDialog({
                   }}
                 >
                   Excluir apenas este
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    onEndSeries(transaction);
+                    onClose();
+                  }}
+                >
+                  Excluir este e os próximos
                 </Button>
                 <Button
                   variant="outline"

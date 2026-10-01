@@ -7,6 +7,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "cat_freelance", name: "Freelance", type: "income", color: "#3b82f6", icon: "Laptop", system: true },
   { id: "cat_investimentos", name: "Investimentos", type: "income", color: "#8b5cf6", icon: "TrendingUp", system: true },
   { id: "cat_venda", name: "Venda", type: "income", color: "#f59e0b", icon: "Tag", system: true },
+  { id: "cat_resgate_meta", name: "Resgate de meta", type: "income", color: "#8b5cf6", icon: "PiggyBank", system: true },
   { id: "cat_outros_in", name: "Outros", type: "income", color: "#64748b", icon: "Sparkles", system: true },
 
   // Despesas
@@ -18,8 +19,31 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "cat_educacao", name: "Educação", type: "expense", color: "#6366f1", icon: "GraduationCap", system: true },
   { id: "cat_compras", name: "Compras", type: "expense", color: "#a855f7", icon: "ShoppingBag", system: true },
   { id: "cat_contas", name: "Contas fixas", type: "expense", color: "#64748b", icon: "ReceiptText", system: true },
+  { id: "cat_meta", name: "Metas", type: "expense", color: "#8b5cf6", icon: "PiggyBank", system: true },
   { id: "cat_outros_out", name: "Outros", type: "expense", color: "#94a3b8", icon: "Sparkles", system: true },
 ];
+
+/** Categorias usadas pelos aportes e resgates de meta. */
+export const GOAL_DEPOSIT_CATEGORY_ID = "cat_meta";
+export const GOAL_WITHDRAW_CATEGORY_ID = "cat_resgate_meta";
+
+const GOAL_WITHDRAW_CATEGORY: Category = {
+  id: GOAL_WITHDRAW_CATEGORY_ID,
+  name: "Resgate de meta",
+  type: "income",
+  color: "#8b5cf6",
+  icon: "PiggyBank",
+  system: true,
+};
+
+/** Garante as categorias de meta em listas já salvas antes desta versão. */
+export function withGoalCategories(categories: Category[]): Category[] {
+  const ids = new Set(categories.map((c) => c.id));
+  const extra = [GOAL_WITHDRAW_CATEGORY].filter((c) => !ids.has(c.id));
+  const deposit = DEFAULT_CATEGORIES.find((c) => c.id === GOAL_DEPOSIT_CATEGORY_ID);
+  if (deposit && !ids.has(deposit.id)) extra.push(deposit);
+  return extra.length ? [...categories, ...extra] : categories;
+}
 
 /** Formas de pagamento e recebimento padrão. */
 export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [

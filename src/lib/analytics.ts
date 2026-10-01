@@ -8,6 +8,8 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Category, Transaction } from "@/types";
+import { isCountable } from "@/lib/activity";
+import { roundMoney } from "@/lib/money";
 
 export interface PeriodTotals {
   income: number;
@@ -20,10 +22,15 @@ export function sumTotals(transactions: Transaction[]): PeriodTotals {
   let income = 0;
   let expense = 0;
   for (const t of transactions) {
+    if (!isCountable(t)) continue;
     if (t.type === "income") income += t.amount;
     else expense += t.amount;
   }
-  return { income, expense, balance: income - expense };
+  return {
+    income: roundMoney(income),
+    expense: roundMoney(expense),
+    balance: roundMoney(income - expense),
+  };
 }
 
 /** Filtra transações dentro de um intervalo (inclusive). */
@@ -60,6 +67,7 @@ export function breakdownByCategory(
   const map = new Map<string, number>();
   let grandTotal = 0;
   for (const t of transactions) {
+    if (!isCountable(t)) continue;
     map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
     grandTotal += t.amount;
   }
@@ -84,6 +92,10 @@ export interface MonthlySeriesPoint {
   monthKey: string;
   income: number;
   expense: number;
+  /** Receitas − despesas daquele mês. */
+  balance: number;
+  /** Soma dos saldos desde o início dos lançamentos até o fim do mês. */
+  cumulative: number;
 }
 
 /** Série dos últimos N meses para o gráfico de entradas x saídas. */
@@ -92,6 +104,11 @@ export function monthlySeries(
   months = 6,
   reference = new Date()
 ): MonthlySeriesPoint[] {
+  const windowStart = startOfMonth(subMonths(reference, months - 1));
+  let cumulative = sumTotals(
+    transactions.filter((t) => parseISO(t.date) < windowStart)
+  ).balance;
+
   const points: MonthlySeriesPoint[] = [];
   for (let i = months - 1; i >= 0; i--) {
     const monthDate = subMonths(reference, i);
@@ -99,11 +116,14 @@ export function monthlySeries(
     const end = endOfMonth(monthDate);
     const inMonth = filterByInterval(transactions, start, end);
     const totals = sumTotals(inMonth);
+    cumulative = roundMoney(cumulative + totals.balance);
     points.push({
       label: format(monthDate, "MMM", { locale: ptBR }),
       monthKey: format(monthDate, "yyyy-MM"),
       income: totals.income,
       expense: totals.expense,
+      balance: totals.balance,
+      cumulative,
     });
   }
   return points;
@@ -117,7 +137,7 @@ export function upcoming(
   limit = 5
 ): Transaction[] {
   return transactions
-    .filter((t) => t.type === type && t.date >= fromISO)
+    .filter((t) => isCountable(t) && t.type === type && t.date >= fromISO)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, limit);
 }
